@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Restaurant Finder – Bangkok Team Dinner</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --card: #21253a;
+    --border: #2e3350;
+    --accent: #6c63ff;
+    --accent2: #00d4aa;
+    --gold: #f5c518;
+    --text: #e8eaf0;
+    --muted: #8b90a8;
+    --danger: #ff6b6b;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(15,17,23,0.95); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex; align-items: center; gap: 4px; overflow-x: auto;
+  }
+  nav a {
+    color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 500;
+    padding: 14px 12px; white-space: nowrap; border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  nav a:hover { color: var(--text); border-bottom-color: var(--accent); }
+
+  /* LAYOUT */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 64px 0; border-bottom: 1px solid var(--border); }
+  section:last-child { border-bottom: none; }
+
+  /* HEADER */
+  #header {
+    background: linear-gradient(135deg, #0f1117 0%, #1a1d27 50%, #12162b 100%);
+    padding: 80px 0 64px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .badge {
+    display: inline-block; background: var(--accent); color: #fff;
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 20px;
+  }
+  #header h1 { font-size: clamp(28px, 5vw, 52px); font-weight: 800; line-height: 1.2; margin-bottom: 16px; }
+  #header h1 span { color: var(--accent); }
+  .meta { color: var(--muted); font-size: 15px; display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+  .meta span { display: flex; align-items: center; gap: 6px; }
+
+  /* STATS BAR */
+  .stats-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 20px 0; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0; }
+  .stat-item { text-align: center; padding: 16px 24px; border-right: 1px solid var(--border); }
+  .stat-item:last-child { border-right: none; }
+  .stat-num { font-size: 32px; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.1; }
+  .stat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 4px; }
+
+  /* SECTION TITLES */
+  .section-title { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .section-sub { color: var(--muted); margin-bottom: 32px; font-size: 15px; }
+  .accent-line { width: 40px; height: 3px; background: var(--accent); border-radius: 2px; margin-bottom: 24px; }
+
+  /* CARDS */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+
+  /* WORKFLOW STEPS */
+  .steps { display: flex; gap: 0; flex-wrap: wrap; }
+  .step {
+    flex: 1; min-width: 140px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 0; padding: 20px 16px; text-align: center; position: relative;
+  }
+  .step:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+  .step:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+  .step-num {
+    width: 32px; height: 32px; border-radius: 50%; background: var(--accent);
+    color: #fff; font-weight: 700; font-size: 13px;
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;
+  }
+  .step h4 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .step p { font-size: 11px; color: var(--muted); }
+  .step-arrow {
+    position: absolute; right: -14px; top: 50%; transform: translateY(-50%);
+    color: var(--accent); font-size: 20px; z-index: 1; display: none;
+  }
+  @media (min-width: 700px) { .step-arrow { display: block; } }
+
+  /* TOOLS */
+  .tool-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 16px; font-size: 14px; font-weight: 500;
+  }
+  .tool-icon { font-size: 18px; }
+  .tools-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead { background: var(--surface); }
+  th { padding: 12px 16px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+  td { padding: 12px 16px; border-top: 1px solid var(--border); vertical-align: middle; }
+  tr:hover td { background: rgba(108,99,255,0.05); }
+
+  /* RANK BADGE */
+  .rank { font-weight: 700; font-size: 15px; }
+  .rank-1 { color: var(--gold); }
+  .rank-2 { color: #c0c0c0; }
+  .rank-3 { color: #cd7f32; }
+
+  /* SCORE BAR */
+  .score-bar-wrap { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+  .score-bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .score-num { font-weight: 700; font-size: 14px; min-width: 28px; }
+
+  /* SOURCE BADGE */
+  .src { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .src-gm { background: rgba(66,133,244,0.15); color: #4285f4; }
+  .src-ta { background: rgba(0,170,143,0.15); color: #00aa8f; }
+  .src-both { background: rgba(108,99,255,0.15); color: var(--accent); }
+
+  /* TOP 3 CARDS */
+  .top3-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 28px; display: flex; flex-direction: column; gap: 12px; position: relative; overflow: hidden;
+  }
+  .top3-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .top3-card.rank1::before { background: linear-gradient(90deg, var(--gold), #ffd700); }
+  .top3-card.rank2::before { background: linear-gradient(90deg, #c0c0c0, #e8e8e8); }
+  .top3-card.rank3::before { background: linear-gradient(90deg, #cd7f32, #e8a060); }
+  .top3-badge { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .top3-card.rank1 .top3-badge { color: var(--gold); }
+  .top3-card.rank2 .top3-badge { color: #c0c0c0; }
+  .top3-card.rank3 .top3-badge { color: #cd7f32; }
+  .top3-name { font-size: 20px; font-weight: 700; }
+  .top3-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font-size: 12px; padding: 3px 10px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+  .top3-score { font-size: 36px; font-weight: 800; color: var(--accent2); }
+  .top3-score span { font-size: 16px; color: var(--muted); font-weight: 400; }
+  .top3-rationale { font-size: 14px; color: var(--muted); line-height: 1.6; }
+  .top3-link { margin-top: auto; color: var(--accent); font-size: 13px; text-decoration: none; font-weight: 500; }
+  .top3-link:hover { text-decoration: underline; }
+
+  /* COMPARISON TABLE */
+  .comp-wrap { overflow-x: auto; }
+  .comp-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 600px; }
+  .comp-table th { background: var(--surface); padding: 12px 16px; text-align: left; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .comp-table td { padding: 14px 16px; border-top: 1px solid var(--border); vertical-align: top; }
+  .pros { color: #4caf50; font-size: 13px; }
+  .cons { color: #ff9800; font-size: 13px; }
+  .pros li, .cons li { margin-bottom: 4px; padding-left: 4px; }
+
+  /* SCORING CRITERIA */
+  .criteria-row { display: flex; align-items: center; gap: 16px; padding: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; }
+  .criteria-weight { font-size: 22px; font-weight: 800; color: var(--accent); min-width: 48px; }
+  .criteria-info { flex: 1; }
+  .criteria-info h4 { font-weight: 600; margin-bottom: 2px; }
+  .criteria-info p { font-size: 13px; color: var(--muted); }
+  .criteria-bar { flex: 2; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .criteria-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+
+  /* DATA SOURCES */
+  .source-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+  .source-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+  .source-card p { font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+  .source-card a { color: var(--accent); font-size: 13px; word-break: break-all; }
+
+  /* AREA BADGE */
+  .area { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; background: rgba(108,99,255,0.12); color: var(--accent); }
+
+  /* AREA PILLS */
+  .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; align-items: center; }
+  .filter-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-right: 4px; }
+  .area-pill { padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; user-select: none; }
+  .area-pill:hover { border-color: var(--accent); color: var(--text); }
+  .area-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* SCENARIO SELECTOR */
+  .scenario-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 28px; }
+  .scenario-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: all 0.2s; text-align: center; }
+  .scenario-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .scenario-card.active { border-color: var(--accent); background: rgba(108,99,255,0.1); }
+  .scenario-icon { font-size: 22px; margin-bottom: 6px; }
+  .scenario-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .scenario-desc { font-size: 11px; color: var(--muted); }
+
+  /* LOADING / ERROR */
+  .loading { text-align: center; padding: 48px; color: var(--muted); }
+  .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* FOOTER */
+  footer { background: var(--surface); border-top: 1px solid var(--border); padding: 32px 0; text-align: center; color: var(--muted); font-size: 13px; }
+  footer a { color: var(--accent); text-decoration: none; }
+
+  @media (max-width: 600px) {
+    .steps { flex-direction: column; }
+    .step { border-radius: 0; border-left: 3px solid var(--accent); }
+    .step:first-child { border-radius: var(--radius) var(--radius) 0 0; border-left: 3px solid var(--accent); }
+    .step:last-child { border-radius: 0 0 var(--radius) var(--radius); }
+    th, td { font-size: 12px; padding: 10px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#objective">Objective</a>
+  <a href="#workflow">Workflow</a>
+  <a href="#tools">Tools</a>
+  <a href="#sources">Data Sources</a>
+  <a href="#scoring">Scoring</a>
+  <a href="#ranking">Top 10</a>
+  <a href="#top3">Top 3</a>
+  <a href="#comparison">Comparison</a>
+</nav>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="container">
+    <div class="badge">AI Exam Project</div>
+    <h1>🍜 AI <span>Restaurant Finder</span><br/>for Bangkok Team Dinner</h1>
+    <div class="meta">
+      <span>📍 Siam · Ari · Thonglor · Asok · Phrom Phong</span>
+      <span>👥 Team of 8–12 people</span>
+      <span>🗓️ <span id="report-date"></span></span>
+      <span>👤 Tibbary Zal</span>
+    </div>
+  </div>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="container">
+    <div class="stats-grid">
+      <div class="stat-item"><div class="stat-num" id="stat-total">—</div><div class="stat-label">Restaurants</div></div>
+      <div class="stat-item"><div class="stat-num">5</div><div class="stat-label">Bangkok Areas</div></div>
+      <div class="stat-item"><div class="stat-num" id="stat-avg">—</div><div class="stat-label">Avg Score</div></div>
+      <div class="stat-item"><div class="stat-num">2</div><div class="stat-label">Data Sources</div></div>
+      <div class="stat-item"><div class="stat-num" id="stat-top-area">—</div><div class="stat-label">Top Area</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- OBJECTIVE -->
+<section id="objective">
+  <div class="container">
+    <div class="section-title">Objective</div>
+    <div class="accent-line"></div>
+    <div class="section-sub">The problem this project solves</div>
+    <div class="grid-2">
+      <div class="card">
+        <h3 style="margin-bottom:12px;font-size:17px;">🎯 The Question</h3>
+        <p style="color:var(--muted);font-size:15px;line-height:1.7;">
+          Which restaurants in Bangkok are most suitable for a team dinner of <strong style="color:var(--text)">8–12 people</strong>,
+          considering location convenience (BTS access), group dining capacity, price range,
+          food quality, and overall experience?
+        </p>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:12px;font-size:17px;">✅ Success Criteria</h3>
+        <ul style="color:var(--muted);font-size:14px;line-height:1.8;padding-left:16px;">
+          <li>At least 20 restaurants collected from 2+ sources</li>
+          <li>Covers 5 Bangkok areas near BTS stations</li>
+          <li>Scored on a 100-point AI model</li>
+          <li>Data refreshes automatically every 2 days</li>
+          <li>Top 3 clearly justified for team decision-making</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WORKFLOW -->
+<section id="workflow">
+  <div class="container">
+    <div class="section-title">Workflow Overview</div>
+    <div class="accent-line"></div>
+    <div class="section-sub">End-to-end automated pipeline</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h4>Scrape</h4>
+        <p>Apify collects restaurant data from Google Maps & TripAdvisor</p>
+        <span class="step-arrow">›</span>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h4>Trigger</h4>
+        <p>n8n runs the pipeline automatically every 2 days</p>
+        <span class="step-arrow">›</span>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h4>Normalize</h4>
+        <p>JS code nodes standardize fields from both sources</p>
+        <span class="step-arrow">›</span>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h4>Deduplicate</h4>
+        <p>Merge duplicate restaurants from both sources</p>
+        <span class="step-arrow">›</span>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <h4>Store</h4>
+        <p>Raw Data + Clean Data saved to Google Sheets</p>
+        <span class="step-arrow">›</span>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <h4>Score</h4>
+        <p>100-point model applied to every restaurant</p>
+        <span class="step-arrow">›</span>
+      </div>
+      <div class="step">
+        <div class="step-num">7</div>
+        <h4>Report</h4>
+        <p>This HTML page displays live results from Sheets</p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-size:13px;color:var(--muted);">📊 Live data source:</span>
+      <a href="https://docs.google.com/spreadsheets/d/1BomvPkIANDyX6tRIj8iWIeXqLoQwDAFoQihcvoCkO64" target="_blank" style="color:var(--accent);font-size:13px;font-weight:500;">
+        AI Food Assistant – Google Sheets ↗
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- TOOLS -->
+<section id="tools">
+  <div class="container">
+    <div class="section-title">Tools Used</div>
+    <div class="accent-line"></div>
+    <div class="section-sub">Technology stack for this project</div>
+    <div class="tools-grid">
+      <div class="tool-tag"><span class="tool-icon">🕷️</span> Apify – Web Scraping Platform</div>
+      <div class="tool-tag"><span class="tool-icon">🗺️</span> Google Maps Scraper (Apify Actor)</div>
+      <div class="tool-tag"><span class="tool-icon">✈️</span> TripAdvisor Scraper (Apify Actor)</div>
+      <div class="tool-tag"><span class="tool-icon">⚙️</span> n8n Cloud – Workflow Automation</div>
+      <div class="tool-tag"><span class="tool-icon">📊</span> Google Sheets – Data Storage</div>
+      <div class="tool-tag"><span class="tool-icon">🤖</span> Claude (Anthropic) – AI Analysis</div>
+      <div class="tool-tag"><span class="tool-icon">🌐</span> HTML / CSS / JavaScript</div>
+      <div class="tool-tag"><span class="tool-icon">🐙</span> GitHub Pages – Deployment</div>
+    </div>
+  </div>
+</section>
+
+<!-- DATA SOURCES -->
+<section id="sources">
+  <div class="container">
+    <div class="section-title">Data Sources</div>
+    <div class="accent-line"></div>
+    <div class="section-sub">Two independent sources for cross-validation</div>
+    <div class="grid-2">
+      <div class="source-card">
+        <h3>🗺️ Google Maps</h3>
+        <p>Real-time restaurant listings scraped via Apify's Google Maps Scraper actor. Covers ratings, review counts, opening hours, price range, and address for 5 Bangkok areas.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <span class="chip">Actor: nwua9Gu5YrADL7ZDj</span>
+          <span class="chip">~20 results/run</span>
+          <span class="chip">~$0.08/run</span>
+        </div>
+        <a href="https://apify.com/compass/google-maps-scraper" target="_blank">apify.com/compass/google-maps-scraper ↗</a>
+      </div>
+      <div class="source-card">
+        <h3>✈️ TripAdvisor</h3>
+        <p>Restaurant listings from TripAdvisor via Apify's TripAdvisor Scraper actor. Provides cuisine tags, traveler ratings, price levels, and verified review counts.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <span class="chip">Actor: dbEyMBriog95Fv8CW</span>
+          <span class="chip">~20 results/run</span>
+          <span class="chip">5 area queries</span>
+        </div>
+        <a href="https://apify.com/maxcopell/tripadvisor" target="_blank">apify.com/maxcopell/tripadvisor ↗</a>
+      </div>
+    </div>
+    <div class="card" style="margin-top:20px;">
+      <p style="font-size:14px;color:var(--muted);">
+        📌 Both sources are scraped on every run, normalized to a common schema, deduplicated by restaurant name, and merged — so restaurants appearing in both sources get combined data for higher accuracy.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- SCORING CRITERIA -->
+<section id="scoring">
+  <div class="container">
+    <div class="section-title">Scoring Criteria</div>
+    <div class="accent-line"></div>
+    <div class="section-sub">100-point AI scoring model — weights specified by exam requirements</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="criteria-row">
+        <div class="criteria-weight">25</div>
+        <div class="criteria-info">
+          <h4>Rating & Review Quality</h4>
+          <p>Average rating (out of 5) weighted at 15 pts + volume of reviews up to 10 pts</p>
+        </div>
+        <div class="criteria-bar"><div class="criteria-fill" style="width:25%"></div></div>
+      </div>
+      <div class="criteria-row">
+        <div class="criteria-weight">20</div>
+        <div class="criteria-info">
+          <h4>Group Suitability</h4>
+          <p>Whether the restaurant type is appropriate for groups of 8–12 (restaurant/buffet/grill = Yes)</p>
+        </div>
+        <div class="criteria-bar"><div class="criteria-fill" style="width:20%"></div></div>
+      </div>
+      <div class="criteria-row">
+        <div class="criteria-weight">15</div>
+        <div class="criteria-info">
+          <h4>Price Suitability</h4>
+          <p>Mid-range ($$) scores highest — balancing value for a team budget</p>
+        </div>
+        <div class="criteria-bar"><div class="criteria-fill" style="width:15%"></div></div>
+      </div>
+      <div class="criteria-row">
+        <div class="criteria-weight">15</div>
+        <div class="criteria-info">
+          <h4>Travel Convenience</h4>
+          <p>BTS station proximity score per area (Siam=15, Asok=14, Phrom Phong=13, Thonglor=12, Ari=11)</p>
+        </div>
+        <div class="criteria-bar"><div class="criteria-fill" style="width:15%"></div></div>
+      </div>
+      <div class="criteria-row">
+        <div class="criteria-weight">15</div>
+        <div class="criteria-info">
+          <h4>Data Completeness</h4>
+          <p>How many of the 9 key fields are filled in (name, area, type, rating, reviews, price, address, hours, URL)</p>
+        </div>
+        <div class="criteria-bar"><div class="criteria-fill" style="width:15%"></div></div>
+      </div>
+      <div class="criteria-row">
+        <div class="criteria-weight">10</div>
+        <div class="criteria-info">
+          <h4>Uniqueness / Experience</h4>
+          <p>Non-generic cuisine types (e.g. Japanese, Italian, Brunch) score higher than plain "Restaurant"</p>
+        </div>
+        <div class="criteria-bar"><div class="criteria-fill" style="width:10%"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TOP 10 -->
+<section id="ranking">
+  <div class="container">
+    <div class="section-title">Top 10 Ranking</div>
+    <div class="accent-line"></div>
+    <div class="section-sub">Ranked by total score — filter by area</div>
+    <div class="filter-bar">
+      <span class="filter-label">Area:</span>
+      <span class="area-pill active" data-area="All" onclick="filterArea(this)">All Areas</span>
+      <span class="area-pill" data-area="Siam" onclick="filterArea(this)">🏬 Siam</span>
+      <span class="area-pill" data-area="Ari" onclick="filterArea(this)">🌿 Ari</span>
+      <span class="area-pill" data-area="Thonglor" onclick="filterArea(this)">🍷 Thonglor</span>
+      <span class="area-pill" data-area="Asok" onclick="filterArea(this)">🏙 Asok</span>
+      <span class="area-pill" data-area="Phrom Phong" onclick="filterArea(this)">💎 Phrom Phong</span>
+    </div>
+    <div id="ranking-content">
+      <div class="loading"><div class="spinner"></div><p>Loading restaurant data…</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- TOP 3 -->
+<section id="top3">
+  <div class="container">
+    <div class="section-title">Top 3 Recommendation</div>
+    <div class="accent-line"></div>
+    <div class="section-sub">Pick a mission — we'll find the best 3 restaurants for it</div>
+    <div class="scenario-grid">
+      <div class="scenario-card active" data-scenario="overall" onclick="switchScenario(this)">
+        <div class="scenario-icon">🏆</div>
+        <div class="scenario-name">Best Overall</div>
+        <div class="scenario-desc">Highest total score</div>
+      </div>
+      <div class="scenario-card" data-scenario="budget" onclick="switchScenario(this)">
+        <div class="scenario-icon">💰</div>
+        <div class="scenario-name">Budget Friendly</div>
+        <div class="scenario-desc">Best value for money</div>
+      </div>
+      <div class="scenario-card" data-scenario="bts" onclick="switchScenario(this)">
+        <div class="scenario-icon">🚆</div>
+        <div class="scenario-name">BTS Access</div>
+        <div class="scenario-desc">Easiest to get to</div>
+      </div>
+      <div class="scenario-card" data-scenario="crowd" onclick="switchScenario(this)">
+        <div class="scenario-icon">⭐</div>
+        <div class="scenario-name">Crowd Favourite</div>
+        <div class="scenario-desc">Most loved & reviewed</div>
+      </div>
+      <div class="scenario-card" data-scenario="group" onclick="switchScenario(this)">
+        <div class="scenario-icon">👥</div>
+        <div class="scenario-name">Group Ready</div>
+        <div class="scenario-desc">Best for 8–12 people</div>
+      </div>
+    </div>
+    <div id="top3-content">
+      <div class="loading"><div class="spinner"></div><p>Loading recommendations…</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARISON -->
+<section id="comparison">
+  <div class="container">
+    <div class="section-title">Restaurant Comparison</div>
+    <div class="accent-line"></div>
+    <div class="section-sub">Trade-offs to help you make the final decision</div>
+    <div id="comparison-content">
+      <div class="loading"><div class="spinner"></div><p>Loading comparison…</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>AI Restaurant Finder · Bangkok Team Dinner · Built with Apify, n8n, Google Sheets, Claude & HTML/CSS/JS</p>
+    <p style="margin-top:8px;">
+      Data source: <a href="https://docs.google.com/spreadsheets/d/1BomvPkIANDyX6tRIj8iWIeXqLoQwDAFoQihcvoCkO64" target="_blank">Google Sheets ↗</a>
+      · Automation: n8n Cloud · Scraping: Apify
+    </p>
+  </div>
+</footer>
+
+<script>
+const SHEET_ID = '1BomvPkIANDyX6tRIj8iWIeXqLoQwDAFoQihcvoCkO64';
+
+const STATIC_DATA = [
+  {"Rank":1,"Restaurant Name":"Katsuya Siam square one","Area":"Siam","Food Type":"Tonkatsu","Rating":4.9,"Review Count":1060,"Price Range":"฿200–400","Source":"Google Maps","Total Score":95,"Rating & Review Quality (25)":25,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":15,"Data Completeness (15)":15,"Uniqueness/Experience (10)":10,"Source URL":"https://www.google.com/maps/search/?api=1&query=Katsuya+Siam+square+one"},
+  {"Rank":2,"Restaurant Name":"Jaguemsong Siam Square One","Area":"Siam","Food Type":"Korean","Rating":4.9,"Review Count":3473,"Price Range":"฿200–400","Source":"Google Maps","Total Score":95,"Rating & Review Quality (25)":25,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":15,"Data Completeness (15)":15,"Uniqueness/Experience (10)":10,"Source URL":"https://www.google.com/maps/search/?api=1&query=Jaguemsong+Siam+Square+One"},
+  {"Rank":3,"Restaurant Name":"Sunrise Tacos MEXICAN GRILL","Area":"Asok","Food Type":"Mexican","Rating":4.7,"Review Count":5004,"Price Range":"฿200–400","Source":"Google Maps","Total Score":93,"Rating & Review Quality (25)":24,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":14,"Data Completeness (15)":15,"Uniqueness/Experience (10)":10,"Source URL":"https://www.google.com/maps/search/?api=1&query=Sunrise+Tacos+MEXICAN+GRILL+Bangkok"},
+  {"Rank":4,"Restaurant Name":"Savoey @Terminal 21 Asok","Area":"Asok","Food Type":"Seafood","Rating":4.6,"Review Count":3622,"Price Range":"฿200–1,200","Source":"Google Maps","Total Score":93,"Rating & Review Quality (25)":24,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":14,"Data Completeness (15)":15,"Uniqueness/Experience (10)":10,"Source URL":"https://www.google.com/maps/search/?api=1&query=Savoey+Terminal+21+Asok"},
+  {"Rank":5,"Restaurant Name":"Khao Piyo Bangkok - Indian Multi Cuisine","Area":"Phrom Phong","Food Type":"Indian","Rating":4.8,"Review Count":1123,"Price Range":"฿200–600","Source":"Google Maps","Total Score":92,"Rating & Review Quality (25)":24,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":13,"Data Completeness (15)":15,"Uniqueness/Experience (10)":10,"Source URL":"https://www.google.com/maps/search/?api=1&query=Khao+Piyo+Bangkok+Indian+Multi+Cuisine"},
+  {"Rank":6,"Restaurant Name":"Old Capital Bike Inn","Area":"Phrom Phong","Food Type":"Restaurant","Rating":4.9,"Review Count":1494,"Price Range":"$$ (Mid 200-500B)","Source":"TripAdvisor","Total Score":92,"Rating & Review Quality (25)":25,"Group Suitability (20)":20,"Price Suitability (15)":15,"Travel Convenience (15)":13,"Data Completeness (15)":13,"Uniqueness/Experience (10)":6,"Source URL":"https://www.tripadvisor.com/Search?q=Old+Capital+Bike+Inn+Bangkok"},
+  {"Rank":7,"Restaurant Name":"Carlton Hotel Bangkok Sukhumvit","Area":"Phrom Phong","Food Type":"Restaurant","Rating":4.9,"Review Count":2520,"Price Range":"$$ (Mid 200-500B)","Source":"TripAdvisor","Total Score":92,"Rating & Review Quality (25)":25,"Group Suitability (20)":20,"Price Suitability (15)":15,"Travel Convenience (15)":13,"Data Completeness (15)":13,"Uniqueness/Experience (10)":6,"Source URL":"https://www.tripadvisor.com/Search?q=Carlton+Hotel+Bangkok+Sukhumvit"},
+  {"Rank":8,"Restaurant Name":"BARTELS Thonglor - Sourdough Sandwiches, Coffee & Juicery","Area":"Thonglor","Food Type":"Brunch","Rating":4.7,"Review Count":1005,"Price Range":"฿200–400","Source":"Google Maps","Total Score":91,"Rating & Review Quality (25)":24,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":12,"Data Completeness (15)":15,"Uniqueness/Experience (10)":10,"Source URL":"https://www.google.com/maps/search/?api=1&query=BARTELS+Thonglor"},
+  {"Rank":9,"Restaurant Name":"Praya Palazzo","Area":"Phrom Phong","Food Type":"Restaurant","Rating":4.6,"Review Count":708,"Price Range":"$$ (Mid 200-500B)","Source":"TripAdvisor","Total Score":91,"Rating & Review Quality (25)":24,"Group Suitability (20)":20,"Price Suitability (15)":15,"Travel Convenience (15)":13,"Data Completeness (15)":13,"Uniqueness/Experience (10)":6,"Source URL":"https://www.tripadvisor.com/Search?q=Praya+Palazzo+Bangkok"},
+  {"Rank":10,"Restaurant Name":"Emporium Suites by Chatrium","Area":"Phrom Phong","Food Type":"Restaurant","Rating":4.7,"Review Count":3903,"Price Range":"$$ (Mid 200-500B)","Source":"TripAdvisor","Total Score":91,"Rating & Review Quality (25)":24,"Group Suitability (20)":20,"Price Suitability (15)":15,"Travel Convenience (15)":13,"Data Completeness (15)":13,"Uniqueness/Experience (10)":6,"Source URL":"https://www.tripadvisor.com/Search?q=Emporium+Suites+by+Chatrium+Bangkok"},
+  {"Rank":11,"Restaurant Name":"The Sukosol Hotel, Bangkok","Area":"Phrom Phong","Food Type":"Restaurant","Rating":4.6,"Review Count":4816,"Price Range":"$$ (Mid 200-500B)","Source":"TripAdvisor","Total Score":91,"Rating & Review Quality (25)":24,"Group Suitability (20)":20,"Price Suitability (15)":15,"Travel Convenience (15)":13,"Data Completeness (15)":13,"Uniqueness/Experience (10)":6,"Source URL":"https://www.tripadvisor.com/Search?q=The+Sukosol+Hotel+Bangkok"},
+  {"Rank":12,"Restaurant Name":"Jim Thompson, A Thai Restaurant","Area":"Siam","Food Type":"Thai","Rating":4.8,"Review Count":3636,"Price Range":"฿1,000+","Source":"Google Maps","Total Score":90,"Rating & Review Quality (25)":24,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":15,"Data Completeness (15)":15,"Uniqueness/Experience (10)":6,"Source URL":"https://www.google.com/maps/search/?api=1&query=Jim+Thompson+Thai+Restaurant+Bangkok"},
+  {"Rank":13,"Restaurant Name":"Nara Thai Cuisine Terminal 21 Asoke","Area":"Asok","Food Type":"Thai","Rating":4.7,"Review Count":1136,"Price Range":"฿400–1,200","Source":"Google Maps","Total Score":89,"Rating & Review Quality (25)":24,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":14,"Data Completeness (15)":15,"Uniqueness/Experience (10)":6,"Source URL":"https://www.google.com/maps/search/?api=1&query=Nara+Thai+Cuisine+Terminal+21+Asoke"},
+  {"Rank":14,"Restaurant Name":"Stoke Bangkok","Area":"Thonglor","Food Type":"American","Rating":4.9,"Review Count":304,"Price Range":"฿600–1,600","Source":"Google Maps","Total Score":88,"Rating & Review Quality (25)":21,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":12,"Data Completeness (15)":15,"Uniqueness/Experience (10)":10,"Source URL":"https://www.google.com/maps/search/?api=1&query=Stoke+Bangkok+Thonglor"},
+  {"Rank":15,"Restaurant Name":"The Okura Prestige Bangkok","Area":"Phrom Phong","Food Type":"Restaurant","Rating":4.8,"Review Count":5654,"Price Range":"$$$ (Upscale 500-1000B)","Source":"TripAdvisor","Total Score":88,"Rating & Review Quality (25)":24,"Group Suitability (20)":20,"Price Suitability (15)":12,"Travel Convenience (15)":13,"Data Completeness (15)":13,"Uniqueness/Experience (10)":6,"Source URL":"https://www.tripadvisor.com/Search?q=The+Okura+Prestige+Bangkok"},
+  {"Rank":16,"Restaurant Name":"Fuego","Area":"Thonglor","Food Type":"Restaurant","Rating":4.8,"Review Count":624,"Price Range":"฿2,000+","Source":"Google Maps","Total Score":87,"Rating & Review Quality (25)":24,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":12,"Data Completeness (15)":15,"Uniqueness/Experience (10)":6,"Source URL":"https://www.google.com/maps/search/?api=1&query=Fuego+Thonglor+Bangkok"},
+  {"Rank":17,"Restaurant Name":"Siam Paragon","Area":"Siam","Food Type":"Restaurant","Rating":4.3,"Review Count":10560,"Price Range":"N/A","Source":"TripAdvisor","Total Score":86,"Rating & Review Quality (25)":23,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":15,"Data Completeness (15)":12,"Uniqueness/Experience (10)":6,"Source URL":"https://www.tripadvisor.com/Search?q=Siam+Paragon+Bangkok"},
+  {"Rank":18,"Restaurant Name":"Terminal 21","Area":"Asok","Food Type":"Restaurant","Rating":4.3,"Review Count":6446,"Price Range":"N/A","Source":"TripAdvisor","Total Score":85,"Rating & Review Quality (25)":23,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":14,"Data Completeness (15)":12,"Uniqueness/Experience (10)":6,"Source URL":"https://www.tripadvisor.com/Search?q=Terminal+21+Asok+Bangkok"},
+  {"Rank":19,"Restaurant Name":"The Emporia","Area":"Asok","Food Type":"Cantonese","Rating":4.2,"Review Count":94,"Price Range":"฿400–600","Source":"Google Maps","Total Score":84,"Rating & Review Quality (25)":15,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":14,"Data Completeness (15)":15,"Uniqueness/Experience (10)":10,"Source URL":"https://www.google.com/maps/search/?api=1&query=The+Emporia+Asok+Bangkok"},
+  {"Rank":20,"Restaurant Name":"Parma Ari","Area":"Ari","Food Type":"Italian","Rating":4.7,"Review Count":187,"Price Range":"฿800–2,000","Source":"Google Maps","Total Score":84,"Rating & Review Quality (25)":18,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":11,"Data Completeness (15)":15,"Uniqueness/Experience (10)":10,"Source URL":"https://www.google.com/maps/search/?api=1&query=Parma+Ari+Bangkok"},
+  {"Rank":21,"Restaurant Name":"Kinroll - Ari","Area":"Ari","Food Type":"Restaurant","Rating":4.8,"Review Count":397,"Price Range":"฿1,000+","Source":"Google Maps","Total Score":84,"Rating & Review Quality (25)":22,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":11,"Data Completeness (15)":15,"Uniqueness/Experience (10)":6,"Source URL":"https://www.google.com/maps/search/?api=1&query=Kinroll+Ari+Bangkok"},
+  {"Rank":22,"Restaurant Name":"Kimpton Maa-lai Bangkok By IHG","Area":"Phrom Phong","Food Type":"Restaurant","Rating":4.9,"Review Count":2169,"Price Range":"$$$$ (Fine Dining >1000B)","Source":"TripAdvisor","Total Score":84,"Rating & Review Quality (25)":25,"Group Suitability (20)":20,"Price Suitability (15)":7,"Travel Convenience (15)":13,"Data Completeness (15)":13,"Uniqueness/Experience (10)":6,"Source URL":"https://www.tripadvisor.com/Search?q=Kimpton+Maa-lai+Bangkok"},
+  {"Rank":23,"Restaurant Name":"Capella Bangkok","Area":"Phrom Phong","Food Type":"Restaurant","Rating":4.9,"Review Count":1145,"Price Range":"$$$$ (Fine Dining >1000B)","Source":"TripAdvisor","Total Score":84,"Rating & Review Quality (25)":25,"Group Suitability (20)":20,"Price Suitability (15)":7,"Travel Convenience (15)":13,"Data Completeness (15)":13,"Uniqueness/Experience (10)":6,"Source URL":"https://www.tripadvisor.com/Search?q=Capella+Bangkok"},
+  {"Rank":24,"Restaurant Name":"SWD Bangkok","Area":"Phrom Phong","Food Type":"Restaurant","Rating":4.8,"Review Count":377,"Price Range":"N/A","Source":"Google Maps","Total Score":83,"Rating & Review Quality (25)":22,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":13,"Data Completeness (15)":12,"Uniqueness/Experience (10)":6,"Source URL":"https://www.google.com/maps/search/?api=1&query=SWD+Bangkok"},
+  {"Rank":25,"Restaurant Name":"Emporium","Area":"Phrom Phong","Food Type":"Shopping mall","Rating":4.4,"Review Count":14331,"Price Range":"N/A","Source":"Google Maps","Total Score":81,"Rating & Review Quality (25)":23,"Group Suitability (20)":12,"Price Suitability (15)":10,"Travel Convenience (15)":13,"Data Completeness (15)":13,"Uniqueness/Experience (10)":10,"Source URL":"https://www.google.com/maps/search/?api=1&query=Emporium+Phrom+Phong+Bangkok"},
+  {"Rank":26,"Restaurant Name":"GINGER FARM kitchen at Emporium","Area":"Phrom Phong","Food Type":"Restaurant","Rating":4.7,"Review Count":161,"Price Range":"฿200–400","Source":"Google Maps","Total Score":81,"Rating & Review Quality (25)":17,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":13,"Data Completeness (15)":15,"Uniqueness/Experience (10)":6,"Source URL":"https://www.google.com/maps/search/?api=1&query=GINGER+FARM+kitchen+Emporium+Bangkok"},
+  {"Rank":27,"Restaurant Name":"Reap Factory","Area":"Phrom Phong","Food Type":"Restaurant","Rating":4.8,"Review Count":113,"Price Range":"฿200–1,400","Source":"Google Maps","Total Score":80,"Rating & Review Quality (25)":16,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":13,"Data Completeness (15)":15,"Uniqueness/Experience (10)":6,"Source URL":"https://www.google.com/maps/search/?api=1&query=Reap+Factory+Phrom+Phong+Bangkok"},
+  {"Rank":28,"Restaurant Name":"Do Nūa - La Villa Ari","Area":"Ari","Food Type":"Thai","Rating":4.9,"Review Count":160,"Price Range":"฿200–400","Source":"Google Maps","Total Score":80,"Rating & Review Quality (25)":18,"Group Suitability (20)":20,"Price Suitability (15)":10,"Travel Convenience (15)":11,"Data Completeness (15)":15,"Uniqueness/Experience (10)":6,"Source URL":"https://www.google.com/maps/search/?api=1&query=Do+Nua+La+Villa+Ari+Bangkok"},
+  {"Rank":29,"Restaurant Name":"Arirang","Area":"Ari","Food Type":"Restaurant","Rating":3.9,"Review Count":54,"Price Range":"$$ - $$$","Source":"TripAdvisor","Total Score":78,"Rating & Review Quality (25)":13,"Group Suitability (20)":20,"Price Suitability (15)":15,"Travel Convenience (15)":11,"Data Completeness (15)":13,"Uniqueness/Experience (10)":6,"Source URL":"https://www.tripadvisor.com/Search?q=Arirang+Ari+Bangkok"},
+  {"Rank":30,"Restaurant Name":"Hobs Thonglor","Area":"Thonglor","Food Type":"Restaurant","Rating":3.8,"Review Count":19,"Price Range":"$$ - $$$","Source":"TripAdvisor","Total Score":77,"Rating & Review Quality (25)":11,"Group Suitability (20)":20,"Price Suitability (15)":15,"Travel Convenience (15)":12,"Data Completeness (15)":13,"Uniqueness/Experience (10)":6,"Source URL":"https://www.tripadvisor.com/Search?q=Hobs+Thonglor+Bangkok"}
+];
+
+let ALL_DATA = [];
+let currentArea = 'All';
+let currentScenario = 'overall';
+
+document.getElementById('report-date').textContent =
+  new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+
+function fetchSheet(sheetName) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'gvizCb_' + Date.now();
+    const script = document.createElement('script');
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${cbName}&sheet=${encodeURIComponent(sheetName)}`;
+    const timer = setTimeout(() => reject(new Error('Timeout')), 10000);
+    window[cbName] = (json) => {
+      clearTimeout(timer); delete window[cbName]; document.head.removeChild(script);
+      try {
+        const cols = json.table.cols.map(c => c.label);
+        const rows = json.table.rows.map(r =>
+          Object.fromEntries(cols.map((c,i) => [c, r.c[i] ? (r.c[i].v ?? '') : '']))
+        );
+        resolve(rows);
+      } catch(e) { reject(e); }
+    };
+    script.onerror = () => { clearTimeout(timer); reject(new Error('Load failed')); };
+    script.src = url;
+    document.head.appendChild(script);
+  });
+}
+
+function srcBadge(src) {
+  const s = String(src||'');
+  if (s.includes('+')) return `<span class="src src-both">Both</span>`;
+  if (s.includes('TripAdvisor')) return `<span class="src src-ta">TripAdvisor</span>`;
+  return `<span class="src src-gm">Google Maps</span>`;
+}
+function rankClass(r) {
+  return r==1?'rank rank-1':r==2?'rank rank-2':r==3?'rank rank-3':'rank';
+}
+function scoreBar(score,max=100) {
+  const pct = Math.min(Math.round((score/max)*100),100);
+  return `<div class="score-bar-wrap"><div class="score-bar"><div class="score-fill" style="width:${pct}%"></div></div><div class="score-num">${score}</div></div>`;
+}
+
+function renderStats(data) {
+  const total = data.length;
+  const avg = total ? Math.round(data.reduce((s,r)=>s+(parseInt(r['Total Score'])||0),0)/total) : 0;
+  const areaCounts = {};
+  data.forEach(r => { const a=r['Area']||'Bangkok'; areaCounts[a]=(areaCounts[a]||0)+1; });
+  const topArea = Object.entries(areaCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-avg').textContent = avg;
+  document.getElementById('stat-top-area').textContent = topArea;
+}
+
+function sortByScenario(data, scenario) {
+  const d = [...data];
+  if (scenario === 'overall') return d.sort((a,b)=>(parseInt(b['Total Score'])||0)-(parseInt(a['Total Score'])||0));
+  if (scenario === 'budget')  return d.sort((a,b)=>(parseInt(b['Price Suitability (15)'])||0)-(parseInt(a['Price Suitability (15)'])||0));
+  if (scenario === 'bts')     return d.sort((a,b)=>(parseInt(b['Travel Convenience (15)'])||0)-(parseInt(a['Travel Convenience (15)'])||0));
+  if (scenario === 'crowd')   return d.sort((a,b)=>((parseFloat(b['Rating'])||0)*0.6+(Math.min(parseInt(b['Review Count'])||0,5000)/5000)*40)-((parseFloat(a['Rating'])||0)*0.6+(Math.min(parseInt(a['Review Count'])||0,5000)/5000)*40));
+  if (scenario === 'group')   return d.sort((a,b)=>((parseInt(b['Group Suitability (20)'])||0)+(parseInt(b['Rating & Review Quality (25)'])||0))-((parseInt(a['Group Suitability (20)'])||0)+(parseInt(a['Rating & Review Quality (25)'])||0)));
+  return d;
+}
+
+function renderRanking(data, area) {
+  const filtered = area === 'All' ? data : data.filter(r => r['Area'] === area);
+  const top10 = filtered.slice(0, 10);
+  if (!top10.length) {
+    document.getElementById('ranking-content').innerHTML = '<div class="card" style="text-align:center;color:var(--muted);padding:32px;">No restaurants found for this area yet.</div>';
+    return;
+  }
+  document.getElementById('ranking-content').innerHTML = `
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>#</th><th>Restaurant</th><th>Area</th><th>Type</th>
+        <th>Rating</th><th>Price</th><th>Source</th><th>Score /100</th>
+      </tr></thead>
+      <tbody>${top10.map((r,i) => `<tr>
+        <td><span class="${rankClass(i+1)}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</span></td>
+        <td style="font-weight:600;max-width:180px;">${r['Restaurant Name']||'—'}</td>
+        <td><span class="area">${r['Area']||'—'}</span></td>
+        <td style="color:var(--muted);font-size:13px;">${(r['Food Type']||'—').split(',')[0]}</td>
+        <td>${r['Rating']?'⭐ '+parseFloat(r['Rating']).toFixed(1):'—'}</td>
+        <td style="font-size:13px;">${r['Price Range']||'—'}</td>
+        <td>${srcBadge(r['Source'])}</td>
+        <td>${scoreBar(parseInt(r['Total Score'])||0)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
+const scenarioLabels = {
+  overall:['🏆 #1 Best Overall','🥈 #2 Runner-Up','🥉 #3 Third Pick'],
+  budget: ['💰 #1 Best Value','💰 #2 Runner-Up','💰 #3 Budget Pick'],
+  bts:    ['🚆 #1 Closest BTS','🚆 #2 Easy Access','🚆 #3 Good Access'],
+  crowd:  ['⭐ #1 Most Loved','⭐ #2 Fan Favourite','⭐ #3 Well-Rated'],
+  group:  ['👥 #1 Group Pick','👥 #2 Group Option','👥 #3 Group Choice'],
+};
+const rankClasses = ['rank1','rank2','rank3'];
+
+function generateRationale(r, i, scenario) {
+  const name = r['Restaurant Name']||'This restaurant';
+  const area = r['Area']||'Bangkok';
+  const food = r['Food Type']||'food';
+  const rating = parseFloat(r['Rating'])||0;
+  const reviews = parseInt(r['Review Count'])||0;
+  const price = r['Price Range']||'';
+  const score = parseInt(r['Total Score'])||0;
+  const msgs = {
+    overall: [`Top scorer at ${score}/100 — ${name} in ${area} combines strong ${food} cuisine (${rating}⭐, ${reviews.toLocaleString()} reviews) with excellent BTS access and group suitability.`,
+              `Second overall at ${score}/100. ${name} offers ${food} in ${area} with a ${rating}⭐ rating — a dependable choice if #1 is unavailable.`,
+              `Solid third at ${score}/100. ${name} (${area}) rounds out the top 3 with ${food} cuisine and ${rating}⭐ consistency.`],
+    budget:  [`Best price-to-quality ratio. ${name} in ${area} offers ${food} at ${price} — excellent value without compromising on the team experience.`,
+              `Strong budget alternative. ${name} gives you ${food} quality at a team-friendly ${price} price point in ${area}.`,
+              `Good value third option. ${name} (${area}) keeps costs manageable at ${price} while maintaining a ${rating}⭐ rating.`],
+    bts:     [`Most convenient BTS access in ${area}. ${name} is the easiest restaurant to reach for a team coming from across Bangkok.`,
+              `Second-best transport access. ${name} in ${area} is straightforward to reach via BTS — minimal travel stress for the team.`,
+              `Good BTS connectivity. ${name} (${area}) ensures no team member has a difficult commute.`],
+    crowd:   [`Most loved by diners — ${rating}⭐ from ${reviews.toLocaleString()} reviews at ${name}. High volume means quality is consistent and verified.`,
+              `Second crowd favourite. ${name} has earned ${reviews.toLocaleString()} reviews with a ${rating}⭐ rating — well-proven over time.`,
+              `Highly regarded. ${name} (${area}) maintains a strong ${rating}⭐ across ${reviews.toLocaleString()} reviews.`],
+    group:   [`Top group-ready pick. ${name} in ${area} scores highest on group suitability — venue type and capacity are well suited for 8–12 people.`,
+              `Strong group option. ${name} handles larger parties well and has the reviews to back up the group dining experience.`,
+              `Reliable group choice. ${name} (${area}) is a practical option for a team dinner with confirmed group-friendly setup.`],
+  };
+  return (msgs[scenario]||msgs.overall)[Math.min(i,2)];
+}
+
+function renderTop3(data, scenario) {
+  const sorted = sortByScenario(data, scenario);
+  const top3 = sorted.slice(0,3);
+  const labels = scenarioLabels[scenario]||scenarioLabels.overall;
+  document.getElementById('top3-content').innerHTML = `
+    <div class="grid-3">${top3.map((r,i) => `
+      <div class="top3-card ${rankClasses[i]}">
+        <div class="top3-badge">${labels[i]}</div>
+        <div class="top3-name">${r['Restaurant Name']||'—'}</div>
+        <div class="top3-meta">
+          <span class="area">${r['Area']||'—'}</span>
+          <span class="chip">${(r['Food Type']||'Restaurant').split(',')[0]}</span>
+          <span class="chip">${r['Price Range']||'N/A'}</span>
+          ${srcBadge(r['Source'])}
+        </div>
+        <div class="top3-score">${parseInt(r['Total Score'])||0}<span>/100</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--muted);">
+          <div>⭐ Rating: <strong style="color:var(--text)">${r['Rating']||'N/A'}</strong></div>
+          <div>💬 Reviews: <strong style="color:var(--text)">${parseInt(r['Review Count']||0).toLocaleString()}</strong></div>
+          <div>👥 Group: <strong style="color:var(--text)">${r['Group Suitability (20)']||'—'}/20</strong></div>
+          <div>📍 Travel: <strong style="color:var(--text)">${r['Travel Convenience (15)']||'—'}/15</strong></div>
+        </div>
+        <div class="top3-rationale">${generateRationale(r,i,scenario)}</div>
+        ${r['Source URL']?`<a class="top3-link" href="${r['Source URL']}" target="_blank">View source ↗</a>`:''}
+      </div>`).join('')}
+    </div>`;
+}
+
+function generatePros(r) {
+  const pros = [];
+  const rating = parseFloat(r['Rating'])||0;
+  const reviews = parseInt(r['Review Count'])||0;
+  const price = r['Price Range']||'';
+  const area = r['Area']||'';
+  if (rating>=4.7) pros.push(`Excellent rating (${rating}⭐)`);
+  else if (rating>=4.5) pros.push(`High rating (${rating}⭐)`);
+  if (reviews>1000) pros.push(`Very well-reviewed (${reviews.toLocaleString()} reviews)`);
+  else if (reviews>200) pros.push(`Good review volume (${reviews.toLocaleString()} reviews)`);
+  if (price.includes('$$')&&!price.includes('$$$$')) pros.push('Mid-range pricing — good for team budget');
+  if (['Siam','Asok'].includes(area)) pros.push(`Prime BTS location (${area})`);
+  else pros.push(`BTS accessible (${area})`);
+  if (r['Group Suitability (20)']>=18) pros.push('Confirmed group-friendly');
+  return pros.slice(0,4);
+}
+function generateCautions(r) {
+  const cons = [];
+  const rating = parseFloat(r['Rating'])||0;
+  const reviews = parseInt(r['Review Count'])||0;
+  const price = r['Price Range']||'';
+  const area = r['Area']||'';
+  if (rating<4.5) cons.push('Rating below 4.5 — check recent reviews');
+  if (reviews<100) cons.push('Limited review data — newer or less-known spot');
+  if (price.includes('$$$$')) cons.push('Fine dining pricing — may strain team budget');
+  else if (price==='N/A'||price==='$') cons.push('Price range unclear — confirm beforehand');
+  if (['Ari','Thonglor'].includes(area)) cons.push(`${area} is further from central Bangkok`);
+  if (cons.length===0) cons.push('No major cautions — confirm reservation in advance');
+  return cons.slice(0,3);
+}
+
+function renderComparison(data) {
+  const top3 = data.slice(0,3);
+  document.getElementById('comparison-content').innerHTML = `
+    <div class="comp-wrap"><table class="comp-table">
+      <thead><tr><th>Restaurant</th><th>Score</th><th>✅ Pros</th><th>⚠️ Cautions</th><th>Best For</th></tr></thead>
+      <tbody>${top3.map((r,i) => {
+        const pros = generatePros(r);
+        const cons = generateCautions(r);
+        const bf = i===0?'First choice — reliable, well-reviewed, accessible':i===1?'Strong backup with great food quality':'Alternative if #1 & #2 unavailable';
+        return `<tr>
+          <td><strong>${r['Restaurant Name']||'—'}</strong><br/><span class="area" style="margin-top:4px;display:inline-block">${r['Area']||''}</span></td>
+          <td><span style="font-size:20px;font-weight:800;color:var(--accent2)">${parseInt(r['Total Score'])||0}</span></td>
+          <td><ul class="pros" style="padding-left:14px;">${pros.map(p=>`<li>${p}</li>`).join('')}</ul></td>
+          <td><ul class="cons" style="padding-left:14px;">${cons.map(c=>`<li>${c}</li>`).join('')}</ul></td>
+          <td style="font-size:13px;color:var(--muted);max-width:160px;">${bf}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+}
+
+function filterArea(el) {
+  document.querySelectorAll('.area-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  currentArea = el.dataset.area;
+  renderRanking(ALL_DATA, currentArea);
+}
+
+function switchScenario(el) {
+  document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  currentScenario = el.dataset.scenario;
+  renderTop3(ALL_DATA, currentScenario);
+}
+
+async function renderAll() {
+  let usingFallback = false;
+  let data;
+  try {
+    data = await fetchSheet('Scores');
+    if (!data||data.length===0) throw new Error('Empty');
+  } catch(e) {
+    console.warn('Using fallback:', e.message);
+    data = STATIC_DATA;
+    usingFallback = true;
+  }
+  try {
+    const seen = new Set();
+    ALL_DATA = data
+      .filter(r => r['Restaurant Name'] && !seen.has(r['Restaurant Name']) && seen.add(r['Restaurant Name']))
+      .sort((a,b) => (parseInt(b['Total Score'])||0)-(parseInt(a['Total Score'])||0));
+
+    if (usingFallback) {
+      document.querySelectorAll('#ranking-content,#top3-content,#comparison-content').forEach(el => {
+        el.insertAdjacentHTML('beforebegin','<div style="background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#f5c518;border-radius:8px;padding:10px 16px;font-size:13px;margin-bottom:16px;">📌 Showing cached data — connect to internet and refresh to load live results.</div>');
+      });
+    }
+
+    renderStats(ALL_DATA);
+    renderRanking(ALL_DATA, currentArea);
+    renderTop3(ALL_DATA, currentScenario);
+    renderComparison(ALL_DATA);
+  } catch(e) {
+    console.error(e);
+    ['ranking-content','top3-content','comparison-content'].forEach(id => {
+      document.getElementById(id).innerHTML = `<div style="color:var(--danger);padding:16px;">⚠️ Render error: ${e.message}</div>`;
+    });
+  }
+}
+
+renderAll();
+</script>
+</body>
+</html>
